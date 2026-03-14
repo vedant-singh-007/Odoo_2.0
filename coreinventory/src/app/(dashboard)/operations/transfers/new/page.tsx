@@ -7,34 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, ArrowDownToLine } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Repeat } from "lucide-react";
 import Link from "next/link";
 
-interface Product {
-  id: string;
-  name: string;
-  skuCode: string;
-  unitOfMeasure: string;
-}
+interface Product { id: string; name: string; skuCode: string; totalStock: number; }
+interface Location { id: string; name: string; type: string; }
+interface MoveLine { productId: string; quantity: number; }
 
-interface Location {
-  id: string;
-  name: string;
-  type: string;
-}
-
-interface MoveLine {
-  productId: string;
-  quantity: number;
-}
-
-export default function NewReceiptPage() {
+export default function NewTransferPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -50,78 +32,54 @@ export default function NewReceiptPage() {
     fetch("/api/products").then((r) => r.json()).then(setProducts);
     fetch("/api/locations").then((r) => r.json()).then((locs: Location[]) => {
       setLocations(locs);
-      // Default source = vendor location, dest = first internal
-      const vendor = locs.find((l: Location) => l.type === "VENDOR");
-      const internal = locs.find((l: Location) => l.type === "INTERNAL");
-      if (vendor) setSourceLocationId(vendor.id);
-      if (internal) setDestLocationId(internal.id);
+      const internals = locs.filter((l: Location) => l.type === "INTERNAL");
+      if (internals.length >= 2) {
+        setSourceLocationId(internals[0].id);
+        setDestLocationId(internals[1].id);
+      } else if (internals.length === 1) {
+        setSourceLocationId(internals[0].id);
+      }
     });
   }, []);
 
-  const addLine = () => {
-    setLines([...lines, { productId: "", quantity: 0 }]);
-  };
-
-  const removeLine = (index: number) => {
-    setLines(lines.filter((_, i) => i !== index));
-  };
-
-  const updateLine = (index: number, field: keyof MoveLine, value: string | number) => {
+  const addLine = () => setLines([...lines, { productId: "", quantity: 0 }]);
+  const removeLine = (i: number) => setLines(lines.filter((_, idx) => idx !== i));
+  const updateLine = (i: number, field: keyof MoveLine, value: string | number) => {
     const updated = [...lines];
-    if (field === "quantity") {
-      updated[index][field] = Number(value);
-    } else {
-      updated[index][field] = value as string;
-    }
+    if (field === "quantity") updated[i][field] = Number(value);
+    else updated[i][field] = value as string;
     setLines(updated);
   };
 
   const handleSubmit = async (andValidate: boolean = false) => {
     setError("");
     setSaving(true);
-
     const validLines = lines.filter((l) => l.productId && l.quantity > 0);
-    if (validLines.length === 0) {
-      setError("Add at least one product with quantity > 0");
-      setSaving(false);
-      return;
-    }
-
-    if (!sourceLocationId || !destLocationId) {
-      setError("Select source and destination locations");
-      setSaving(false);
-      return;
-    }
+    if (validLines.length === 0) { setError("Add at least one product with quantity > 0"); setSaving(false); return; }
+    if (!sourceLocationId || !destLocationId) { setError("Select source and destination locations"); setSaving(false); return; }
+    if (sourceLocationId === destLocationId) { setError("Source and destination must be different"); setSaving(false); return; }
 
     try {
       const res = await fetch("/api/operations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "RECEIPT",
+          type: "TRANSFER",
           reference,
           notes,
-          moves: validLines.map((line) => ({
-            productId: line.productId,
+          moves: validLines.map((l) => ({
+            productId: l.productId,
             sourceLocationId,
             destLocationId,
-            quantity: line.quantity,
+            quantity: l.quantity,
           })),
         }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error);
-        setSaving(false);
-        return;
-      }
+      if (!res.ok) { setError(data.error); setSaving(false); return; }
 
       if (andValidate) {
-        const valRes = await fetch(`/api/operations/${data.id}/validate`, {
-          method: "POST",
-        });
+        const valRes = await fetch(`/api/operations/${data.id}/validate`, { method: "POST" });
         if (!valRes.ok) {
           const valData = await valRes.json();
           setError(valData.error);
@@ -129,28 +87,22 @@ export default function NewReceiptPage() {
           return;
         }
       }
-
-      router.push("/operations/receipts");
+      router.push("/operations/transfers");
     } catch {
-      setError("Failed to create receipt");
+      setError("Failed to create transfer");
       setSaving(false);
     }
   };
 
-  const vendorLocations = locations.filter((l) => l.type === "VENDOR");
-  const internalLocations = locations.filter((l) => l.type === "INTERNAL");
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/operations/receipts">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+        <Link href="/operations/transfers">
+          <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">New Receipt</h1>
-          <p className="text-gray-500 mt-1">Receive goods from vendor</p>
+          <h1 className="text-3xl font-bold text-gray-900">New Internal Transfer</h1>
+          <p className="text-gray-500 mt-1">Move stock between locations</p>
         </div>
       </div>
 
@@ -164,8 +116,8 @@ export default function NewReceiptPage() {
         <Card className="lg:col-span-2 border-0 shadow-md">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <ArrowDownToLine className="h-5 w-5 text-[hsl(280,30%,35%)]" />
-              Receipt Details
+              <Repeat className="h-5 w-5 text-[hsl(280,30%,35%)]" />
+              Transfer Details
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -175,8 +127,8 @@ export default function NewReceiptPage() {
                 <Input
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
-                  placeholder="REC-004"
-                  id="receipt-reference"
+                  placeholder="TRF-002"
+                  id="transfer-reference"
                 />
               </div>
               <div className="space-y-2">
@@ -184,40 +136,38 @@ export default function NewReceiptPage() {
                 <Input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Additional notes..."
-                  id="receipt-notes"
+                  placeholder="Reason for transfer..."
                 />
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Source (Vendor)</Label>
+                <Label>Source Location</Label>
                 <Select value={sourceLocationId} onValueChange={setSourceLocationId}>
-                  <SelectTrigger id="receipt-source">
-                    <SelectValue placeholder="Select vendor location" />
+                  <SelectTrigger id="transfer-source">
+                    <SelectValue placeholder="Select source" />
                   </SelectTrigger>
                   <SelectContent>
-                    {vendorLocations.map((loc) => (
-                      <SelectItem key={loc.id} value={loc.id}>
-                        {loc.name}
-                      </SelectItem>
-                    ))}
+                    {locations
+                      .filter((l) => l.type === "INTERNAL")
+                      .map((loc) => (
+                        <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Destination (Warehouse)</Label>
+                <Label>Destination Location</Label>
                 <Select value={destLocationId} onValueChange={setDestLocationId}>
-                  <SelectTrigger id="receipt-dest">
-                    <SelectValue placeholder="Select warehouse" />
+                  <SelectTrigger id="transfer-dest">
+                    <SelectValue placeholder="Select destination" />
                   </SelectTrigger>
                   <SelectContent>
-                    {internalLocations.map((loc) => (
-                      <SelectItem key={loc.id} value={loc.id}>
-                        {loc.name}
-                      </SelectItem>
-                    ))}
+                    {locations
+                      .filter((l) => l.type === "INTERNAL")
+                      .map((loc) => (
+                        <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -226,9 +176,7 @@ export default function NewReceiptPage() {
         </Card>
 
         <Card className="border-0 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg">Actions</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-lg">Actions</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <Button
               onClick={() => handleSubmit(false)}
@@ -243,7 +191,7 @@ export default function NewReceiptPage() {
               onClick={() => handleSubmit(true)}
               disabled={saving}
               className="w-full bg-emerald-600 hover:bg-emerald-700"
-              id="validate-receipt-button"
+              id="validate-transfer-button"
             >
               Save & Validate
             </Button>
@@ -251,13 +199,11 @@ export default function NewReceiptPage() {
         </Card>
       </div>
 
-      {/* Product Lines */}
       <Card className="border-0 shadow-md">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Product Lines</CardTitle>
           <Button size="sm" variant="outline" onClick={addLine} id="add-line-button">
-            <Plus className="h-4 w-4 mr-1" />
-            Add Line
+            <Plus className="h-4 w-4 mr-1" />Add Line
           </Button>
         </CardHeader>
         <CardContent>
@@ -266,17 +212,14 @@ export default function NewReceiptPage() {
               <div key={index} className="flex items-end gap-4 p-3 rounded-lg bg-gray-50">
                 <div className="flex-1 space-y-2">
                   <Label>Product</Label>
-                  <Select
-                    value={line.productId}
-                    onValueChange={(v) => updateLine(index, "productId", v)}
-                  >
+                  <Select value={line.productId} onValueChange={(v) => updateLine(index, "productId", v)}>
                     <SelectTrigger id={`line-product-${index}`}>
                       <SelectValue placeholder="Select product" />
                     </SelectTrigger>
                     <SelectContent>
                       {products.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.name} ({p.skuCode})
+                          {p.name} ({p.skuCode}) - Stock: {p.totalStock}
                         </SelectItem>
                       ))}
                     </SelectContent>

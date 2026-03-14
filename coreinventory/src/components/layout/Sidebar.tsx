@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -16,10 +17,22 @@ import {
   Warehouse,
   Menu,
   X,
+  Repeat,
+  UserCircle,
+  LogOut,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 
-const navItems = [
+interface NavItem {
+  label: string;
+  href?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles?: string[];
+  children?: NavItem[];
+}
+
+const navItems: NavItem[] = [
   {
     label: "Dashboard",
     href: "/",
@@ -27,15 +40,19 @@ const navItems = [
   },
   {
     label: "Products",
-    href: "/products",
     icon: Package,
+    children: [
+      { label: "All Products", href: "/products", icon: Package },
+      { label: "Reorder Rules", href: "/products/reorder-rules", icon: RefreshCw, roles: ["MANAGER"] },
+    ],
   },
   {
     label: "Operations",
     icon: ClipboardCheck,
     children: [
-      { label: "Receipts", href: "/operations/receipts", icon: ArrowDownToLine },
-      { label: "Deliveries", href: "/operations/deliveries", icon: ArrowUpFromLine },
+      { label: "Receipts", href: "/operations/receipts", icon: ArrowDownToLine, roles: ["MANAGER"] },
+      { label: "Deliveries", href: "/operations/deliveries", icon: ArrowUpFromLine, roles: ["MANAGER"] },
+      { label: "Internal Transfers", href: "/operations/transfers", icon: Repeat },
       { label: "Adjustments", href: "/operations/adjustments", icon: ClipboardCheck },
     ],
   },
@@ -46,18 +63,38 @@ const navItems = [
   },
   {
     label: "Settings",
-    href: "/settings",
     icon: Settings,
+    roles: ["MANAGER"],
     children: [
-      { label: "Warehouses & Locations", href: "/settings", icon: Warehouse },
+      { label: "Warehouses & Locations", href: "/settings", icon: Warehouse, roles: ["MANAGER"] },
     ],
   },
 ];
 
+function filterNavByRole(items: NavItem[], role: string): NavItem[] {
+  return items
+    .filter((item) => !item.roles || item.roles.includes(role))
+    .map((item) => {
+      if (item.children) {
+        const filteredChildren = item.children.filter(
+          (child) => !child.roles || child.roles.includes(role)
+        );
+        if (filteredChildren.length === 0) return null;
+        return { ...item, children: filteredChildren };
+      }
+      return item;
+    })
+    .filter(Boolean) as NavItem[];
+}
+
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["Operations"]);
+
+  const userRole = (session?.user as { role?: string })?.role || "STAFF";
+  const visibleNav = filterNavByRole(navItems, userRole);
 
   const toggleGroup = (label: string) => {
     setExpandedGroups((prev) =>
@@ -91,16 +128,18 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight">CoreInventory</h1>
-            <p className="text-xs text-white/60">Inventory Management</p>
+            <p className="text-xs text-white/60">
+              {userRole === "MANAGER" ? "Inventory Manager" : "Warehouse Staff"}
+            </p>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="px-3 py-4 space-y-1 overflow-y-auto h-[calc(100vh-80px)]">
-          {navItems.map((item) => {
+        <nav className="px-3 py-4 space-y-1 overflow-y-auto h-[calc(100vh-80px-120px)]">
+          {visibleNav.map((item) => {
             if (item.children) {
               const isExpanded = expandedGroups.includes(item.label);
-              const isChildActive = item.children.some((c) => pathname === c.href);
+              const isChildActive = item.children.some((c) => c.href && pathname === c.href);
 
               return (
                 <div key={item.label}>
@@ -126,7 +165,7 @@ export function Sidebar() {
                       {item.children.map((child) => (
                         <Link
                           key={child.href}
-                          href={child.href}
+                          href={child.href!}
                           className={cn(
                             "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
                             pathname === child.href
@@ -161,6 +200,30 @@ export function Sidebar() {
             );
           })}
         </nav>
+
+        {/* Profile section at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 p-3 space-y-1">
+          <Link
+            href="/profile"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+              pathname === "/profile"
+                ? "bg-white/20 text-white shadow-sm"
+                : "text-white/70 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            <UserCircle className="h-5 w-5 shrink-0" />
+            <span>My Profile</span>
+          </Link>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-white/70 hover:bg-white/10 hover:text-white w-full"
+            id="sidebar-logout"
+          >
+            <LogOut className="h-5 w-5 shrink-0" />
+            <span>Logout</span>
+          </button>
+        </div>
       </aside>
 
       {/* Overlay for mobile */}

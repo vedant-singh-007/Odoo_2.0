@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user, error: authError } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
 
     // Fetch the operation with moves
@@ -26,6 +30,14 @@ export async function POST(
       return NextResponse.json(
         { error: "Operation not found" },
         { status: 404 }
+      );
+    }
+
+    // RBAC: Staff can only validate TRANSFER and ADJUSTMENT operations
+    if (user.role === "STAFF" && !["TRANSFER", "ADJUSTMENT"].includes(operation.type)) {
+      return NextResponse.json(
+        { error: "Only managers can validate receipts and deliveries" },
+        { status: 403 }
       );
     }
 

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireManager } from "@/lib/api-auth";
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user, error: authError } = await requireManager();
+    if (authError) return authError;
+
     const { id } = await params;
     const { name, type } = await req.json();
 
@@ -26,6 +30,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user, error: authError } = await requireManager();
+    if (authError) return authError;
+
     const { id } = await params;
     await prisma.location.delete({ where: { id } });
     return NextResponse.json({ success: true });

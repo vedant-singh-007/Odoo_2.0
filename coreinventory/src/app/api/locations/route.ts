@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth, requireManager } from "@/lib/api-auth";
 
 export async function GET() {
   try {
+    // Any authenticated user can view locations (needed for transfers/adjustments)
+    const { error: authError } = await requireAuth();
+    if (authError) return authError;
+
     const locations = await prisma.location.findMany({
       orderBy: { name: "asc" },
     });
@@ -15,6 +20,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const { user, error: authError } = await requireManager();
+    if (authError) return authError;
+
     const { name, type } = await req.json();
 
     if (!name || !type) {

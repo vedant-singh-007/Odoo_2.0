@@ -90,8 +90,8 @@ export default function SettingsPage() {
     return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 border-4 border-[hsl(280,30%,35%)]/20 border-t-[hsl(280,30%,35%)] rounded-full animate-spin" /></div>;
   }
 
-  const LocationForm = ({ onSubmit, label }: { onSubmit: () => void; label: string }) => (
-    <div className="space-y-4">
+  const locationFormFields = (
+    <>
       {error && <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>}
       <div className="space-y-2">
         <Label>Location Name</Label>
@@ -109,8 +109,7 @@ export default function SettingsPage() {
           </SelectContent>
         </Select>
       </div>
-      <DialogFooter><Button onClick={onSubmit} className="bg-[hsl(280,30%,35%)] hover:bg-[hsl(280,30%,30%)]" id="location-submit">{label}</Button></DialogFooter>
-    </div>
+    </>
   );
 
   return (
@@ -128,7 +127,10 @@ export default function SettingsPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Create Location</DialogTitle><DialogDescription>Add a new warehouse or location.</DialogDescription></DialogHeader>
-            <LocationForm onSubmit={handleCreate} label="Create Location" />
+            <div className="space-y-4">
+              {locationFormFields}
+              <DialogFooter><Button onClick={handleCreate} className="bg-[hsl(280,30%,35%)] hover:bg-[hsl(280,30%,30%)]" id="location-submit-create">Create Location</Button></DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -179,7 +181,10 @@ export default function SettingsPage() {
       <Dialog open={!!editLoc} onOpenChange={(open) => !open && setEditLoc(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Edit Location</DialogTitle><DialogDescription>Update location details.</DialogDescription></DialogHeader>
-          <LocationForm onSubmit={handleUpdate} label="Save Changes" />
+          <div className="space-y-4">
+            {locationFormFields}
+            <DialogFooter><Button onClick={handleUpdate} className="bg-[hsl(280,30%,35%)] hover:bg-[hsl(280,30%,30%)]" id="location-submit-edit">Save Changes</Button></DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

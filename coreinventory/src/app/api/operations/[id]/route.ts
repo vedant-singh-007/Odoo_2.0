@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user, error: authError } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
     const operation = await prisma.stockOperation.findUnique({
       where: { id },
@@ -28,6 +32,14 @@ export async function GET(
       );
     }
 
+    // Staff cannot view RECEIPT or DELIVERY operations
+    if (user.role === "STAFF" && !["TRANSFER", "ADJUSTMENT"].includes(operation.type)) {
+      return NextResponse.json(
+        { error: "Forbidden: insufficient permissions" },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json(operation);
   } catch (error) {
     console.error("Error fetching operation:", error);
@@ -43,7 +55,33 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user, error: authError } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
+
+    // Check the operation exists and user has permission
+    const existing = await prisma.stockOperation.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Operation not found" }, { status: 404 });
+    }
+
+    // Staff can only edit TRANSFER and ADJUSTMENT operations
+    if (user.role === "STAFF" && !["TRANSFER", "ADJUSTMENT"].includes(existing.type)) {
+      return NextResponse.json(
+        { error: "Only managers can edit receipts and deliveries" },
+        { status: 403 }
+      );
+    }
+
+    // Cannot edit validated or cancelled operations
+    if (existing.status === "DONE" || existing.status === "CANCELLED") {
+      return NextResponse.json(
+        { error: "Cannot edit a completed or cancelled operation" },
+        { status: 400 }
+      );
+    }
+
     const body = await req.json();
     const { reference, notes, moves } = body;
 

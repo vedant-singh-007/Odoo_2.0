@@ -11,6 +11,7 @@ model User {
   id           String           @id @default(cuid())
   name         String
   email        String           @unique
+  phone        String?
   passwordHash String
   role         String           @default("STAFF") // MANAGER or STAFF
   createdAt    DateTime         @default(now())
@@ -26,6 +27,7 @@ model Location {
   updatedAt      DateTime    @updatedAt
   sourceMoves    StockMove[] @relation("SourceLocation")
   destMoves      StockMove[] @relation("DestLocation")
+  reorderRules   ReorderRule[]
 }
 
 model Product {
@@ -38,6 +40,7 @@ model Product {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   stockMoves    StockMove[]
+  reorderRules  ReorderRule[]
 }
 
 model StockOperation {
@@ -51,6 +54,30 @@ model StockOperation {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   moves       StockMove[]
+}
+
+model PasswordResetOtp {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model ReorderRule {
+  id            String   @id @default(cuid())
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId     String
+  location      Location @relation(fields: [locationId], references: [id])
+  locationId    String
+  minQuantity   Float    @default(0)
+  maxQuantity   Float    @default(0)
+  reorderPoint  Float    @default(10)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([productId, locationId])
 }
 
 model StockMove {

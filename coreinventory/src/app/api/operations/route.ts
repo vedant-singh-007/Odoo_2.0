@@ -1,15 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const { user, error: authError } = await requireAuth();
+    if (authError) return authError;
+
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type") || "";
     const status = searchParams.get("status") || "";
 
+    // Staff can only see TRANSFER and ADJUSTMENT operations
+    const typeFilter = type
+      ? { type }
+      : user.role === "STAFF"
+        ? { type: { in: ["TRANSFER", "ADJUSTMENT"] } }
+        : {};
+
     const operations = await prisma.stockOperation.findMany({
       where: {
-        AND: [type ? { type } : {}, status ? { status } : {}],
+        AND: [typeFilter, status ? { status } : {}],
       },
       include: {
         createdBy: { select: { name: true, email: true } },
@@ -36,13 +47,24 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { type, reference, notes, createdById, moves } = body;
+    const { user, error: authError } = await requireAuth();
+    if (authError) return authError;
 
-    if (!type || !createdById || !moves || moves.length === 0) {
+    const body = await req.json();
+    const { type, reference, notes, moves } = body;
+
+    if (!type || !moves || moves.length === 0) {
       return NextResponse.json(
-        { error: "Type, createdById, and at least one move are required" },
+        { error: "Type and at least one move are required" },
         { status: 400 }
+      );
+    }
+
+    // Staff can only create TRANSFER and ADJUSTMENT operations
+    if (user.role === "STAFF" && !["TRANSFER", "ADJUSTMENT"].includes(type)) {
+      return NextResponse.json(
+        { error: "Warehouse staff can only create transfers and adjustments" },
+        { status: 403 }
       );
     }
 
@@ -52,7 +74,7 @@ export async function POST(req: NextRequest) {
         status: "DRAFT",
         reference,
         notes,
-        createdById,
+        createdById: user.id,
         moves: {
           create: moves.map((move: {
             productId: string;

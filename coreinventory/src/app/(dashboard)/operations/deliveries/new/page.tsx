@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +16,6 @@ interface MoveLine { productId: string; quantity: number; }
 
 export default function NewDeliveryPage() {
   const router = useRouter();
-  const { data: session } = useSession();
   const [products, setProducts] = useState<Product[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [reference, setReference] = useState("");
@@ -60,7 +58,6 @@ export default function NewDeliveryPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "DELIVERY", reference, notes,
-          createdById: (session?.user as { id?: string })?.id,
           moves: validLines.map((l) => ({ productId: l.productId, sourceLocationId, destLocationId, quantity: l.quantity })),
         }),
       });
