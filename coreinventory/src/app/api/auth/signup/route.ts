@@ -4,22 +4,49 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password, role } = await req.json();
+    const { loginId, email, password, role } = await req.json();
 
-    if (!name || !email || !password) {
+    if (!loginId || loginId.length < 6 || loginId.length > 12) {
       return NextResponse.json(
-        { error: "Name, email,and password are required" },
+        { error: "Login ID must be between 6 and 12 characters" },
+        { status: 400 }
+      );
+    }
+    
+    if (!email) {
+      return NextResponse.json(
+        { error: "Email is required" },
         { status: 400 }
       );
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    if (!password || password.length <= 8) {
+      return NextResponse.json(
+        { error: "Password must be more than 8 characters" },
+        { status: 400 }
+      );
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9])/.test(password)) {
+      return NextResponse.json(
+        { error: "Password must contain a lowercase letter, uppercase letter, and a special character" },
+        { status: 400 }
+      );
+    }
+
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email },
+          { loginId }
+        ]
+      },
     });
 
     if (existingUser) {
+      const field = existingUser.email === email ? "Email" : "Login ID";
       return NextResponse.json(
-        { error: "User with this email already exists" },
+        { error: `${field} is already in use` },
         { status: 400 }
       );
     }
@@ -28,7 +55,8 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.create({
       data: {
-        name,
+        name: loginId, // Map name to loginId since wireframe removed the name field
+        loginId,
         email,
         passwordHash,
         role: role || "STAFF",

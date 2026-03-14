@@ -8,20 +8,20 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        loginId: { label: "Login ID", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Please enter email and password");
+        if (!credentials?.loginId || !credentials?.password) {
+          throw new Error("Please enter login ID and password");
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { loginId: credentials.loginId },
         });
 
         if (!user) {
-          throw new Error("No user found with this email");
+          throw new Error("No user found with this login ID");
         }
 
         const isPasswordValid = await bcrypt.compare(

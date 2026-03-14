@@ -25,6 +25,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Package, Edit, Trash2, Eye } from "lucide-react";
 
 interface Product {
@@ -165,21 +166,41 @@ export default function ProductsPage() {
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="product-category">Category</Label>
-          <Input
-            id="product-category"
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            placeholder="Raw Materials"
-          />
+          <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })}>
+            <SelectTrigger id="product-category">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="General">General</SelectItem>
+              <SelectItem value="Raw Materials">Raw Materials</SelectItem>
+              <SelectItem value="Finished Goods">Finished Goods</SelectItem>
+              <SelectItem value="Consumables">Consumables</SelectItem>
+              <SelectItem value="Electronics">Electronics</SelectItem>
+              <SelectItem value="Packaging">Packaging</SelectItem>
+              <SelectItem value="Tools">Tools</SelectItem>
+              <SelectItem value="Spare Parts">Spare Parts</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="product-uom">Unit of Measure</Label>
-          <Input
-            id="product-uom"
-            value={formData.unitOfMeasure}
-            onChange={(e) => setFormData({ ...formData, unitOfMeasure: e.target.value })}
-            placeholder="kg"
-          />
+          <Select value={formData.unitOfMeasure} onValueChange={(val) => setFormData({ ...formData, unitOfMeasure: val })}>
+            <SelectTrigger id="product-uom">
+              <SelectValue placeholder="Select unit" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Units">Units</SelectItem>
+              <SelectItem value="kg">kg</SelectItem>
+              <SelectItem value="g">g</SelectItem>
+              <SelectItem value="Liters">Liters</SelectItem>
+              <SelectItem value="mL">mL</SelectItem>
+              <SelectItem value="Meters">Meters</SelectItem>
+              <SelectItem value="Pieces">Pieces</SelectItem>
+              <SelectItem value="Boxes">Boxes</SelectItem>
+              <SelectItem value="Pallets">Pallets</SelectItem>
+              <SelectItem value="Dozen">Dozen</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="product-reorder">Reorder Level</Label>

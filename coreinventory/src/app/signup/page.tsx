@@ -13,9 +13,10 @@ import Link from "next/link";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("STAFF");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,11 +26,17 @@ export default function SignupPage() {
     setLoading(true);
     setError("");
 
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ loginId, email, password, role }),
       });
 
       const data = await res.json();
@@ -42,7 +49,7 @@ export default function SignupPage() {
 
       // Auto-login after signup
       const result = await signIn("credentials", {
-        email,
+        loginId,
         password,
         redirect: false,
       });
@@ -73,9 +80,9 @@ export default function SignupPage() {
             <Package className="h-8 w-8 text-white" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
+            <CardTitle className="text-2xl font-bold">Sign up Page</CardTitle>
             <CardDescription className="text-base mt-1">
-              Get started with CoreInventory
+              Create a new account
             </CardDescription>
           </div>
         </CardHeader>
@@ -89,19 +96,21 @@ export default function SignupPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="loginId">Enter Login Id</Label>
               <Input
-                id="name"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                id="loginId"
+                placeholder="6-12 characters"
+                value={loginId}
+                onChange={(e) => setLoginId(e.target.value)}
                 required
-                className="h-11"
+                minLength={6}
+                maxLength={12}
+                className="h-11 border-red-200 focus-visible:ring-red-200"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="signup-email">Email</Label>
+              <Label htmlFor="signup-email">Enter Email Id</Label>
               <Input
                 id="signup-email"
                 type="email"
@@ -109,12 +118,12 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-11"
+                className="h-11 border-red-200 focus-visible:ring-red-200"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="signup-password">Password</Label>
+              <Label htmlFor="signup-password">Enter Password</Label>
               <Input
                 id="signup-password"
                 type="password"
@@ -122,15 +131,29 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
-                className="h-11"
+                minLength={9}
+                className="h-11 border-red-200 focus-visible:ring-red-200"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Re-Enter Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={9}
+                className="h-11 border-red-200 focus-visible:ring-red-200"
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
               <Select value={role} onValueChange={setRole}>
-                <SelectTrigger id="role" className="h-11">
+                <SelectTrigger id="role" className="h-11 border-red-200 focus-visible:ring-red-200">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -144,18 +167,11 @@ export default function SignupPage() {
           <CardFooter className="flex flex-col gap-3">
             <Button
               type="submit"
-              className="w-full h-11 bg-gradient-to-r from-[hsl(280,30%,35%)] to-[hsl(280,30%,45%)] hover:from-[hsl(280,30%,30%)] hover:to-[hsl(280,30%,40%)] text-white font-medium shadow-md"
+              className="w-full h-11 bg-white border border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 font-medium rounded-lg"
               disabled={loading}
               id="signup-button"
             >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Creating account...
-                </div>
-              ) : (
-                "Create Account"
-              )}
+              {loading ? "Creating account..." : "SIGN UP"}
             </Button>
             <p className="text-sm text-center text-gray-500">
               Already have an account?{" "}

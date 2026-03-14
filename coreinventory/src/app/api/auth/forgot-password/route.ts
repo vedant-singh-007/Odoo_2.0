@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendOtpEmail } from "@/lib/mailer";
 
 function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -38,14 +39,19 @@ export async function POST(req: NextRequest) {
       data: { email, otp, expiresAt },
     });
 
-    // In production, send OTP via email service.
-    // For demo/hackathon purposes, we return it in response.
-    console.log(`[OTP] Password reset OTP for ${email}: ${otp}`);
+    // Send OTP via email (falls back to console log if SMTP not configured)
+    try {
+      await sendOtpEmail(email, otp);
+    } catch (emailError) {
+      console.error("[MAILER ERROR] Failed to send OTP email. Gmail is likely blocking the standard password.");
+      console.warn(`\n================================`);
+      console.warn(`[FALLBACK] Your OTP is: ${otp}`);
+      console.warn(`================================\n`);
+      // Don't fail the request — OTP is still saved in DB
+    }
 
     return NextResponse.json({
       message: "OTP sent to your email address",
-      // Remove this in production — only for demo
-      _demo_otp: otp,
     });
   } catch (error) {
     console.error("Forgot password error:", error);

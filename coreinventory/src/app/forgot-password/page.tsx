@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [demoOtp, setDemoOtp] = useState("");
+
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -45,9 +45,6 @@ export default function ForgotPasswordPage() {
       if (!res.ok) {
         setError(data.error);
       } else {
-        if (data._demo_otp) {
-          setDemoOtp(data._demo_otp);
-        }
         setStep("otp");
       }
     } catch {
@@ -208,14 +205,7 @@ export default function ForgotPasswordPage() {
                   {error}
                 </div>
               )}
-              {demoOtp && (
-                <div className="p-3 rounded-lg bg-[hsl(280,30%,97%)] border border-[hsl(280,30%,90%)]">
-                  <p className="text-xs font-medium text-[hsl(280,30%,35%)] mb-1">Demo Mode</p>
-                  <p className="text-xs text-gray-500">
-                    Your OTP is: <span className="font-bold text-[hsl(280,30%,35%)]">{demoOtp}</span>
-                  </p>
-                </div>
-              )}
+
               <div className="space-y-2">
                 <Label htmlFor="otp">6-Digit OTP</Label>
                 <Input

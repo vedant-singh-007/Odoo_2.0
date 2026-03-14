@@ -1,8 +1,7 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { User } from "lucide-react";
 
 export function Header() {
   const { data: session } = useSession();
@@ -25,15 +24,6 @@ export function Header() {
                 {(session.user as { role?: string }).role}
               </span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
-              id="logout-button"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
           </div>
         )}
       </div>

@@ -13,6 +13,7 @@ async function main() {
     update: {},
     create: {
       name: "Alice Manager",
+      loginId: "manager1",
       email: "manager@coreinventory.com",
       passwordHash: managerHash,
       role: "MANAGER",
@@ -24,6 +25,7 @@ async function main() {
     update: {},
     create: {
       name: "Bob Staff",
+      loginId: "staff1",
       email: "staff@coreinventory.com",
       passwordHash: staffHash,
       role: "STAFF",

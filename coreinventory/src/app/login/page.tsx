@@ -12,7 +12,7 @@ import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ export default function LoginPage() {
     setError("");
 
     const result = await signIn("credentials", {
-      email,
+      loginId,
       password,
       redirect: false,
     });
@@ -52,9 +52,9 @@ export default function LoginPage() {
             <Package className="h-8 w-8 text-white" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+            <CardTitle className="text-2xl font-bold">Login Page</CardTitle>
             <CardDescription className="text-base mt-1">
-              Sign in to CoreInventory
+              Sign in to your account
             </CardDescription>
           </div>
         </CardHeader>
@@ -68,13 +68,12 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="loginId">Login Id</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="loginId"
+                type="text"
+                value={loginId}
+                onChange={(e) => setLoginId(e.target.value)}
                 required
                 className="h-11"
               />
@@ -101,47 +100,29 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-
-            <div className="text-right">
-              <Link href="/forgot-password" className="text-sm text-[hsl(280,30%,35%)] hover:underline">
-                Forgot password?
-              </Link>
-            </div>
           </CardContent>
 
           <CardFooter className="flex flex-col gap-3">
             <Button
               type="submit"
-              className="w-full h-11 bg-gradient-to-r from-[hsl(280,30%,35%)] to-[hsl(280,30%,45%)] hover:from-[hsl(280,30%,30%)] hover:to-[hsl(280,30%,40%)] text-white font-medium shadow-md"
+              className="w-full h-11 bg-white border border-[hsl(280,30%,35%)] text-[hsl(280,30%,35%)] hover:bg-[hsl(280,30%,95%)] font-medium rounded-lg"
               disabled={loading}
               id="login-button"
             >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Signing in...
-                </div>
-              ) : (
-                "Sign In"
-              )}
+              {loading ? "Signing in..." : "SIGN IN"}
             </Button>
-            <p className="text-sm text-center text-gray-500">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="text-[hsl(280,30%,35%)] font-medium hover:underline">
-                Sign up
+            <div className="text-sm text-center text-gray-500 mt-2">
+              <Link href="/forgot-password" className="text-[hsl(280,30%,35%)] hover:underline">
+                Forget Password ?
               </Link>
-            </p>
+              {" | "}
+              <Link href="/signup" className="text-[hsl(280,30%,35%)] hover:underline">
+                Sign Up
+              </Link>
+            </div>
           </CardFooter>
         </form>
 
-        {/* Demo credentials */}
-        <div className="px-6 pb-6">
-          <div className="p-3 rounded-lg bg-[hsl(280,30%,97%)] border border-[hsl(280,30%,90%)]">
-            <p className="text-xs font-medium text-[hsl(280,30%,35%)] mb-1">Demo Credentials</p>
-            <p className="text-xs text-gray-500">Manager: manager@coreinventory.com / manager123</p>
-            <p className="text-xs text-gray-500">Staff: staff@coreinventory.com / staff123</p>
-          </div>
-        </div>
       </Card>
     </div>
   );
