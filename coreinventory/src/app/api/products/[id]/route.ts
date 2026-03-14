@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth, requireManager } from "@/lib/api-auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Any authenticated user can view product details
+    const { error: authError } = await requireAuth();
+    if (authError) return authError;
+
     const { id } = await params;
     const product = await prisma.product.findUnique({
       where: { id },
@@ -71,6 +76,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user, error: authError } = await requireManager();
+    if (authError) return authError;
+
     const { id } = await params;
     const body = await req.json();
     const { name, skuCode, category, unitOfMeasure, reorderLevel } = body;
@@ -101,6 +109,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user, error: authError } = await requireManager();
+    if (authError) return authError;
+
     const { id } = await params;
     await prisma.product.delete({ where: { id } });
     return NextResponse.json({ success: true });

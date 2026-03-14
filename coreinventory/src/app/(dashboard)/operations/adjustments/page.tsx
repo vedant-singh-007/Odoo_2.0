@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,8 +40,6 @@ const statusColors: Record<string, "default" | "secondary" | "destructive" | "su
 };
 
 export default function AdjustmentsPage() {
-  const { data: session } = useSession();
-  const router = useRouter();
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -112,7 +107,6 @@ export default function AdjustmentsPage() {
         body: JSON.stringify({
           type: "ADJUSTMENT", reference,
           notes: `Physical count: ${countedQty}, System stock: ${currentStock}, Difference: ${difference > 0 ? "+" : ""}${difference}`,
-          createdById: (session?.user as { id?: string })?.id,
           moves,
         }),
       });

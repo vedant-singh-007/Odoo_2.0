@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth, requireManager } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
   try {
+    // Auth required but any role can view products
+    const { error: authError } = await requireAuth();
+    if (authError) return authError;
+
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
     const category = searchParams.get("category") || "";
@@ -67,6 +72,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Only managers can create products
+    const { user, error: authError } = await requireManager();
+    if (authError) return authError;
+
     const body = await req.json();
     const { name, skuCode, category, unitOfMeasure, reorderLevel } = body;
 

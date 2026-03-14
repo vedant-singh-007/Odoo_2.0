@@ -1,8 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/api-auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { user, error: authError } = await requireAuth();
+    if (authError) return authError;
+
+    const { searchParams } = new URL(req.url);
+    const filterType = searchParams.get("type") || "";
+    const filterStatus = searchParams.get("status") || "";
+    const filterWarehouse = searchParams.get("warehouse") || "";
+
     // Total unique products
     const totalProducts = await prisma.product.count();
 
@@ -55,14 +64,49 @@ export async function GET() {
     // Total stock value (sum of all stock across all products)
     const totalStockUnits = productStocks.reduce((sum, p) => sum + Math.max(0, p.stock), 0);
 
-    // Recent operations
+    // Recent operations (with filters)
+    const operationWhere: Record<string, unknown> = {};
+    
+    // Fix: treat "ALL" as no filter
+    if (filterType && filterType !== "ALL") operationWhere.type = filterType;
+    if (filterStatus && filterStatus !== "ALL") operationWhere.status = filterStatus;
+    if (filterWarehouse && filterWarehouse !== "ALL") {
+      operationWhere.moves = {
+        some: {
+          OR: [
+            { sourceLocationId: filterWarehouse },
+            { destLocationId: filterWarehouse },
+          ],
+        },
+      };
+    }
+
+    // Staff should only see TRANSFER and ADJUSTMENT operations in the dashboard
+    if (user.role === "STAFF") {
+      operationWhere.type = operationWhere.type 
+        ? operationWhere.type 
+        : { in: ["TRANSFER", "ADJUSTMENT"] };
+    }
+
     const recentOperations = await prisma.stockOperation.findMany({
-      take: 5,
+      take: 20,
+      where: operationWhere,
       orderBy: { createdAt: "desc" },
       include: {
         createdBy: { select: { name: true } },
-        moves: { select: { quantity: true } },
+        moves: { select: { quantity: true, sourceLocation: { select: { name: true } }, destLocation: { select: { name: true } } } },
       },
+    });
+
+    // Get unique categories and locations for filter dropdowns
+    const categories = await prisma.product.findMany({
+      select: { category: true },
+      distinct: ["category"],
+    });
+
+    const locations = await prisma.location.findMany({
+      select: { id: true, name: true, type: true },
+      orderBy: { name: "asc" },
     });
 
     return NextResponse.json({
@@ -77,8 +121,8 @@ export async function GET() {
         stock: p.stock,
         reorderLevel: p.reorderLevel,
       })),
-      pendingReceipts,
-      pendingDeliveries,
+      pendingReceipts: user.role === "MANAGER" ? pendingReceipts : undefined,
+      pendingDeliveries: user.role === "MANAGER" ? pendingDeliveries : undefined,
       scheduledTransfers,
       recentOperations: recentOperations.map((op) => ({
         id: op.id,
@@ -89,6 +133,11 @@ export async function GET() {
         createdAt: op.createdAt,
         itemCount: op.moves.length,
       })),
+      filters: {
+        categories: categories.map((c) => c.category),
+        locations: locations,
+      },
+      userRole: user.role,
     });
   } catch (error) {
     console.error("Error fetching dashboard:", error);

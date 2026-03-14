@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Package, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Package, Edit, Trash2, Eye } from "lucide-react";
 
 interface Product {
   id: string;
@@ -37,6 +38,10 @@ interface Product {
 }
 
 export default function ProductsPage() {
+  const { data: session } = useSession();
+  const userRole = (session?.user as { role?: string })?.role || "STAFF";
+  const isManager = userRole === "MANAGER";
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -130,8 +135,8 @@ export default function ProductsPage() {
     );
   }
 
-  const ProductForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
-    <div className="space-y-4">
+  const productFormFields = (
+    <>
       {error && (
         <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
           {error}
@@ -186,12 +191,7 @@ export default function ProductsPage() {
           />
         </div>
       </div>
-      <DialogFooter>
-        <Button onClick={onSubmit} className="bg-[hsl(280,30%,35%)] hover:bg-[hsl(280,30%,30%)]" id="product-submit">
-          {submitLabel}
-        </Button>
-      </DialogFooter>
-    </div>
+    </>
   );
 
   return (
@@ -199,27 +199,38 @@ export default function ProductsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-          <p className="text-gray-500 mt-1">Manage your product catalog</p>
+          <p className="text-gray-500 mt-1">
+            {isManager ? "Manage your product catalog" : "View product catalog and stock levels"}
+          </p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button
-              onClick={openCreate}
-              className="bg-[hsl(280,30%,35%)] hover:bg-[hsl(280,30%,30%)]"
-              id="create-product-button"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Create Product</DialogTitle>
-              <DialogDescription>Add a new product to your inventory catalog.</DialogDescription>
-            </DialogHeader>
-            <ProductForm onSubmit={handleCreate} submitLabel="Create Product" />
-          </DialogContent>
-        </Dialog>
+        {isManager && (
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button
+                onClick={openCreate}
+                className="bg-[hsl(280,30%,35%)] hover:bg-[hsl(280,30%,30%)]"
+                id="create-product-button"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Create Product</DialogTitle>
+                <DialogDescription>Add a new product to your inventory catalog.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                {productFormFields}
+                <DialogFooter>
+                  <Button onClick={handleCreate} className="bg-[hsl(280,30%,35%)] hover:bg-[hsl(280,30%,30%)]" id="product-submit-create">
+                    Create Product
+                  </Button>
+                </DialogFooter>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Search */}
@@ -244,6 +255,11 @@ export default function ProductsPage() {
           <CardTitle className="text-lg flex items-center gap-2">
             <Package className="h-5 w-5 text-[hsl(280,30%,35%)]" />
             Product Catalog ({products.length})
+            {!isManager && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                <Eye className="h-3 w-3 mr-1" /> View Only
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -255,7 +271,7 @@ export default function ProductsPage() {
                 <TableHead>Category</TableHead>
                 <TableHead>UoM</TableHead>
                 <TableHead className="text-right">Stock</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {isManager && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -287,31 +303,33 @@ export default function ProductsPage() {
                       {product.totalStock}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(product)}
-                        className="h-8 w-8"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(product.id)}
-                        className="h-8 w-8 text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {isManager && (
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit(product)}
+                          className="h-8 w-8"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(product.id)}
+                          className="h-8 w-8 text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
               {products.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-400 py-8">
+                  <TableCell colSpan={isManager ? 6 : 5} className="text-center text-gray-400 py-8">
                     No products found
                   </TableCell>
                 </TableRow>
@@ -321,16 +339,25 @@ export default function ProductsPage() {
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
-      <Dialog open={!!editProduct} onOpenChange={(open) => !open && setEditProduct(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
-            <DialogDescription>Update product information.</DialogDescription>
-          </DialogHeader>
-          <ProductForm onSubmit={handleUpdate} submitLabel="Save Changes" />
-        </DialogContent>
-      </Dialog>
+      {/* Edit Dialog - only for Managers */}
+      {isManager && (
+        <Dialog open={!!editProduct} onOpenChange={(open) => !open && setEditProduct(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Product</DialogTitle>
+              <DialogDescription>Update product information.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {productFormFields}
+              <DialogFooter>
+                <Button onClick={handleUpdate} className="bg-[hsl(280,30%,35%)] hover:bg-[hsl(280,30%,30%)]" id="product-submit-edit">
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

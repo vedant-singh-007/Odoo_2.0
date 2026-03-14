@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Package,
   AlertTriangle,
@@ -11,6 +14,7 @@ import {
   Repeat,
   TrendingUp,
   Clock,
+  Filter,
 } from "lucide-react";
 
 interface DashboardData {
@@ -25,8 +29,8 @@ interface DashboardData {
     stock: number;
     reorderLevel: number;
   }[];
-  pendingReceipts: number;
-  pendingDeliveries: number;
+  pendingReceipts?: number;
+  pendingDeliveries?: number;
   scheduledTransfers: number;
   recentOperations: {
     id: string;
@@ -37,6 +41,11 @@ interface DashboardData {
     createdAt: string;
     itemCount: number;
   }[];
+  filters: {
+    categories: string[];
+    locations: { id: string; name: string; type: string }[];
+  };
+  userRole?: string;
 }
 
 const statusColors: Record<string, string> = {
@@ -57,12 +66,27 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch("/api/dashboard")
+  // Filter state
+  const [filterType, setFilterType] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterWarehouse, setFilterWarehouse] = useState("");
+
+  const fetchDashboard = useCallback(() => {
+    const params = new URLSearchParams();
+    if (filterType && filterType !== "ALL") params.set("type", filterType);
+    if (filterStatus && filterStatus !== "ALL") params.set("status", filterStatus);
+    if (filterWarehouse && filterWarehouse !== "ALL") params.set("warehouse", filterWarehouse);
+    const qs = params.toString();
+
+    fetch(`/api/dashboard${qs ? `?${qs}` : ""}`)
       .then((r) => r.json())
       .then(setData)
       .finally(() => setLoading(false));
-  }, []);
+  }, [filterType, filterStatus, filterWarehouse]);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
 
   if (loading) {
     return (
@@ -77,6 +101,9 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
+  const hasFilters = (filterType && filterType !== "ALL") || (filterStatus && filterStatus !== "ALL") || (filterWarehouse && filterWarehouse !== "ALL");
+  const isManager = data.userRole === "MANAGER";
+
   return (
     <div className="space-y-6">
       {/* Page Title */}
@@ -88,7 +115,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${isManager ? 'xl:grid-cols-5' : 'xl:grid-cols-3'} gap-4`}>
         <Card className="border-0 shadow-md bg-gradient-to-br from-white to-[hsl(280,30%,98%)] hover:shadow-lg transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
@@ -132,39 +159,43 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-white to-blue-50 hover:shadow-lg transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Pending Receipts</p>
-                <p className="text-3xl font-bold text-blue-600 mt-1" id="kpi-pending-receipts">
-                  {data.pendingReceipts}
-                </p>
+        {isManager && (
+          <Card className="border-0 shadow-md bg-gradient-to-br from-white to-blue-50 hover:shadow-lg transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Pending Receipts</p>
+                  <p className="text-3xl font-bold text-blue-600 mt-1" id="kpi-pending-receipts">
+                    {data.pendingReceipts ?? 0}
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <ArrowDownToLine className="h-6 w-6 text-blue-500" />
+                </div>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                <ArrowDownToLine className="h-6 w-6 text-blue-500" />
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">Incoming stock</p>
-          </CardContent>
-        </Card>
+              <p className="text-xs text-gray-500 mt-2">Incoming stock</p>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card className="border-0 shadow-md bg-gradient-to-br from-white to-amber-50 hover:shadow-lg transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Pending Deliveries</p>
-                <p className="text-3xl font-bold text-amber-600 mt-1" id="kpi-pending-deliveries">
-                  {data.pendingDeliveries}
-                </p>
+        {isManager && (
+          <Card className="border-0 shadow-md bg-gradient-to-br from-white to-amber-50 hover:shadow-lg transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Pending Deliveries</p>
+                  <p className="text-3xl font-bold text-amber-600 mt-1" id="kpi-pending-deliveries">
+                    {data.pendingDeliveries ?? 0}
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-xl bg-amber-100 flex items-center justify-center">
+                  <ArrowUpFromLine className="h-6 w-6 text-amber-500" />
+                </div>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                <ArrowUpFromLine className="h-6 w-6 text-amber-500" />
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">Outgoing stock</p>
-          </CardContent>
-        </Card>
+              <p className="text-xs text-gray-500 mt-2">Outgoing stock</p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-0 shadow-md bg-gradient-to-br from-white to-purple-50 hover:shadow-lg transition-shadow">
           <CardContent className="p-5">
@@ -184,6 +215,74 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Dynamic Filters */}
+      <Card className="border-0 shadow-md">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="h-5 w-5 text-[hsl(280,30%,35%)]" />
+            Filters
+            {hasFilters && (
+              <button
+                onClick={() => { setFilterType(""); setFilterStatus(""); setFilterWarehouse(""); }}
+                className="ml-auto text-xs text-[hsl(280,30%,35%)] hover:underline font-normal"
+              >
+                Clear all
+              </button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-500">Document Type</label>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger id="filter-doc-type">
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All types</SelectItem>
+                  <SelectItem value="RECEIPT">Receipts</SelectItem>
+                  <SelectItem value="DELIVERY">Deliveries</SelectItem>
+                  <SelectItem value="TRANSFER">Internal Transfers</SelectItem>
+                  <SelectItem value="ADJUSTMENT">Adjustments</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-500">Status</label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger id="filter-status">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All statuses</SelectItem>
+                  <SelectItem value="DRAFT">Draft</SelectItem>
+                  <SelectItem value="READY">Ready</SelectItem>
+                  <SelectItem value="DONE">Done</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-500">Warehouse / Location</label>
+              <Select value={filterWarehouse} onValueChange={setFilterWarehouse}>
+                <SelectTrigger id="filter-warehouse">
+                  <SelectValue placeholder="All locations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All locations</SelectItem>
+                  {data.filters?.locations?.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.name} ({loc.type})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Low Stock Alerts Table */}
         <Card className="border-0 shadow-md">
@@ -196,7 +295,7 @@ export default function DashboardPage() {
           <CardContent>
             {data.lowStockItems.length === 0 ? (
               <p className="text-gray-400 text-sm py-4 text-center">
-                All stock levels are healthy ✅
+                All stock levels are healthy
               </p>
             ) : (
               <div className="space-y-3">
@@ -230,12 +329,15 @@ export default function DashboardPage() {
             <CardTitle className="text-lg flex items-center gap-2">
               <Clock className="h-5 w-5 text-[hsl(280,30%,35%)]" />
               Recent Operations
+              {hasFilters && (
+                <Badge variant="secondary" className="ml-2 text-xs">Filtered</Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {data.recentOperations.length === 0 ? (
               <p className="text-gray-400 text-sm py-4 text-center">
-                No operations yet
+                {hasFilters ? "No operations match the filters" : "No operations yet"}
               </p>
             ) : (
               <div className="space-y-3">

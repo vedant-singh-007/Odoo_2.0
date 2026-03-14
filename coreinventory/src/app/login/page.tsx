@@ -103,9 +103,9 @@ export default function LoginPage() {
             </div>
 
             <div className="text-right">
-              <button type="button" className="text-sm text-[hsl(280,30%,35%)] hover:underline">
+              <Link href="/forgot-password" className="text-sm text-[hsl(280,30%,35%)] hover:underline">
                 Forgot password?
-              </button>
+              </Link>
             </div>
           </CardContent>
 
