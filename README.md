@@ -30,20 +30,20 @@ CoreInventory is a modern inventory management system built with [Next.js](https
 ### Installation
 
 1. Clone the repository:
-   \\\ash
+   ```bash
    git clone <repository-url>
    cd coreinventory
-   \\\
+   ```
 
 2. Install dependencies:
-   \\\ash
+   ```bash
    npm install
-   \\\
+   ```
 
 3. Set up environment variables:
-   Create a \.env\ file in the root directory (or use the provided example) and add the following:
+   Create a `.env` file in the root directory (or use the provided example) and add the following:
 
-   \\\env
+   ```env
    DATABASE_URL="file:./dev.db"
    NEXTAUTH_SECRET="your-secret-key"
    NEXTAUTH_URL="http://localhost:3000"
@@ -53,63 +53,57 @@ CoreInventory is a modern inventory management system built with [Next.js](https
    SMTP_PORT="587"
    SMTP_USER="your-email@gmail.com"
    SMTP_PASS="your-app-password"
-   \\\
+   ```
 
 ### Database Setup
 
 1. Initialize the database and run migrations:
-   \\\ash
+   ```bash
    npx prisma migrate dev --name init
-   \\\
+   ```
 
 2. Seed the database with initial data:
-   \\\ash
+   ```bash
    npm run db:seed
-   \\\
+   ```
 
 ### Running the Application
 
 Start the development server:
 
-\\\ash
+```bash
 npm run dev
-\\\
+```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Project Structure
 
-\\\
+```
 coreinventory/
 +-- prisma/             # Database schema and seeds
 +-- public/             # Static assets
 +-- src/
-�   +-- app/            # Next.js App Router pages and API routes
-�   �   +-- (dashboard)/ # Protected dashboard routes
-�   �   +-- api/        # Backend API endpoints
-�   �   +-- login/      # Authentication pages
-�   �   +-- ...
-�   +-- components/     # Reusable UI components
-�   �   +-- layout/     # specialized layout components (Sidebar, Header)
-�   �   +-- ui/         # Shadcn/ui compatible components
-�   +-- lib/            # Utility functions and configurations
+|   +-- app/            # Next.js App Router pages and API routes
+|   |   +-- (dashboard)/ # Protected dashboard routes
+|   |   +-- api/        # Backend API endpoints
+|   |   +-- login/      # Authentication pages
+|   |   +-- ...
+|   +-- components/     # Reusable UI components
+|   |   +-- layout/     # specialized layout components (Sidebar, Header)
+|   |   +-- ui/         # Shadcn/ui compatible components
+|   +-- lib/            # Utility functions and configurations
 +-- ...
-\\\
+```
 
 ## Scripts
 
-- \
-pm run dev\: Starts the development server.
-- \
-pm run build\: Builds the application for production.
-- \
-pm start\: Starts the production server.
-- \
-pm run lint\: Runs ESLint to check for code quality issues.
-- \
-pm run db:seed\: Seeds the database with test data.
-- \
-pm run db:reset\: Resets the database (caution: deletes all data).
+- `npm run dev`: Starts the development server.
+- `npm run build`: Builds the application for production.
+- `npm start`: Starts the production server.
+- `npm run lint`: Runs ESLint to check for code quality issues.
+- `npm run db:seed`: Seeds the database with test data.
+- `npm run db:reset`: Resets the database (caution: deletes all data).
 
 ## License
 
